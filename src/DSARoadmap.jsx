@@ -637,6 +637,30 @@ export default function DSARoadmap() {
   const [activeStage, setActiveStage] = useState(0);
   const [expandedTopic, setExpandedTopic] = useState(null);
   const [tab, setTab] = useState("roadmap");
+  const [checkedTopics, setCheckedTopics] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dsa-checked-topics");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const toggleTopic = (stageId, topicIdx) => {
+    const key = `${stageId}-${topicIdx}`;
+    setCheckedTopics((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("dsa-checked-topics", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const totalTopics = stages.reduce((sum, s) => sum + s.topics.length, 0);
+  const completedTopics = stages.reduce(
+    (sum, s) => sum + s.topics.filter((_, i) => checkedTopics[`${s.id}-${i}`]).length,
+    0
+  );
+  const overallPercent = totalTopics ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
+  const stageCompleted = (s) => s.topics.filter((_, i) => checkedTopics[`${s.id}-${i}`]).length;
 
   const stage = stages[activeStage];
 
@@ -682,6 +706,31 @@ export default function DSARoadmap() {
           <p style={{ color: "#777", fontSize: 13, margin: 0, letterSpacing: 1 }}>
             ZERO {"\u2192"} INTERVIEW READY {"\u2014"} RANKED EASY TO HARD {"\u2014"} BEST YOUTUBE LINKS FOR EVERY TOPIC
           </p>
+
+          {/* Progress Bar */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ color: "#888", fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }}>
+                Overall Progress
+              </span>
+              <span style={{ color: overallPercent === 100 ? "#76FF03" : "#FFD43B", fontSize: 12, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace" }}>
+                {completedTopics}/{totalTopics} topics ({overallPercent}%)
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 6, background: "#1a1a1a", borderRadius: 3, overflow: "hidden" }}>
+              <div
+                style={{
+                  width: `${overallPercent}%`,
+                  height: "100%",
+                  background: overallPercent === 100
+                    ? "linear-gradient(90deg, #76FF03, #00E676)"
+                    : "linear-gradient(90deg, #FFD43B, #FF9800)",
+                  borderRadius: 3,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
 
           {/* Tabs */}
           <div style={{ display: "flex", gap: 4, marginTop: 20 }}>
@@ -781,6 +830,15 @@ export default function DSARoadmap() {
                       >
                         {s.difficulty}
                       </span>
+                      <span
+                        style={{
+                          color: stageCompleted(s) === s.topics.length ? "#76FF03" : "#555",
+                          fontSize: 9,
+                          fontFamily: "'IBM Plex Mono', monospace",
+                        }}
+                      >
+                        {stageCompleted(s)}/{s.topics.length}
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -879,13 +937,38 @@ export default function DSARoadmap() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span
                         style={{
-                          color: expandedTopic === i ? "#fff" : "#ccc",
+                          color: checkedTopics[`${stage.id}-${i}`] ? "#666" : expandedTopic === i ? "#fff" : "#ccc",
                           fontSize: 13,
                           fontWeight: 500,
                           fontFamily: "'IBM Plex Mono', monospace",
+                          textDecoration: checkedTopics[`${stage.id}-${i}`] ? "line-through" : "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
                         }}
                       >
-                        <span style={{ color: stage.accent, marginRight: 8, fontSize: 11 }}>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); toggleTopic(stage.id, i); }}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            minWidth: 18,
+                            borderRadius: 4,
+                            border: checkedTopics[`${stage.id}-${i}`] ? "none" : "2px solid #444",
+                            background: checkedTopics[`${stage.id}-${i}`] ? "#76FF03" : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                            fontSize: 12,
+                            color: "#0D0D0D",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {checkedTopics[`${stage.id}-${i}`] && "\u2713"}
+                        </span>
+                        <span style={{ color: stage.accent, fontSize: 11 }}>
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         {topic.name}
